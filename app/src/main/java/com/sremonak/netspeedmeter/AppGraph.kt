@@ -2,6 +2,7 @@ package com.sremonak.netspeedmeter
 
 import android.content.Context
 import com.sremonak.netspeedmeter.core.SettingsRepository
+import com.sremonak.netspeedmeter.data.AppUsageRepository
 import com.sremonak.netspeedmeter.data.SystemStatsSource
 import com.sremonak.netspeedmeter.data.UsageDatabase
 import com.sremonak.netspeedmeter.data.UsageRepository
@@ -16,6 +17,8 @@ object AppGraph {
     lateinit var usage: UsageRepository
         private set
     lateinit var system: SystemStatsSource
+        private set
+    lateinit var appUsage: AppUsageRepository
         private set
     lateinit var network: NetworkStateTracker
         private set
@@ -34,6 +37,7 @@ object AppGraph {
             settings = SettingsRepository(app)
             system = SystemStatsSource(app)
             usage = UsageRepository(UsageDatabase(app), system, settings)
+            appUsage = AppUsageRepository(app, system)
             network = NetworkStateTracker(app).also { it.start() }
             speedTestHistory = SpeedTestHistory(app)
             initialized = true

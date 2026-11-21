@@ -21,14 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Use private signing key (optional)
         env:
@@ -71,17 +71,17 @@ jobs:
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           APK=$(ls dist/NetSpeedMeter-v*[0-9].apk)
-          "$BT/apksigner" verify --print-certs "$APK" | tee verify.txt
+          "$BT/apksigner" verify --verbose --print-certs "$APK" 2>&1 | tee verify.txt
           "$BT/aapt2" dump badging "$APK" > badging.txt
           enc() { sed -e ':a;N;$!ba' -e 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g'; }
           INFO=$( { echo "APK: $(basename "$APK") ($(du -h "$APK" | cut -f1))";
-                    grep -E "^(package|sdkVersion|targetSdkVersion|application-label):" badging.txt;
-                    grep -E "Signer #1 certificate (DN|SHA-256)" verify.txt; } | enc)
+                    grep -E "^(package|minSdkVersion|sdkVersion|targetSdkVersion|application-label):" badging.txt;
+                    grep -iE "certificate (DN|SHA-256)" verify.txt | sort -u; } | enc)
           echo "::notice title=APK summary::$INFO"
           WARN=$(grep -E "^w: " build.log | sed 's#file://.*/com/sremonak/netspeedmeter/##' | sort -u | head -60 | enc)
           if [ -n "$WARN" ]; then echo "::warning title=Kotlin warnings::$WARN"; fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: NetSpeedMeter-apk
           path: dist/*
@@ -89,7 +89,7 @@ jobs:
 
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true

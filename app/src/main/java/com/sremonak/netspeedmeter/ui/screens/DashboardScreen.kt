@@ -27,7 +27,7 @@ import androidx.compose.material.icons.rounded.NetworkCheck
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.RocketLaunch
-import androidx.compose.material.icons.rounded.ShowChart
+import androidx.compose.material.icons.automirrored.rounded.ShowChart
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Wifi
@@ -178,7 +178,7 @@ fun DashboardScreen(onOpenTab: (AppTab) -> Unit) {
 
         item {
             AppCard {
-                SectionHeader("Live activity", Icons.Rounded.ShowChart, trailing = {
+                SectionHeader("Live activity", Icons.AutoMirrored.Rounded.ShowChart, trailing = {
                     Text("last ${LiveTrafficStore.HISTORY_SIZE}s", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 })
                 Spacer(Modifier.height(16.dp))

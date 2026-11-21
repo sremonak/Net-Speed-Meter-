@@ -1,6 +1,16 @@
 package com.sremonak.netspeedmeter.ui.screens
 
 import android.app.Application
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import com.sremonak.netspeedmeter.util.Perms
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +53,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sremonak.netspeedmeter.AppGraph
 import com.sremonak.netspeedmeter.core.Format
+import com.sremonak.netspeedmeter.data.AppUsage
 import com.sremonak.netspeedmeter.data.DailyUsage
 import com.sremonak.netspeedmeter.data.UsageRepository
 import com.sremonak.netspeedmeter.ui.components.AppCard
@@ -68,6 +79,8 @@ class UsageViewModel(app: Application) : AndroidViewModel(app) {
     val range = _range.asStateFlow()
     private val _days = MutableStateFlow<List<DailyUsage>>(emptyList())
     val days = _days.asStateFlow()
+    private val _apps = MutableStateFlow<List<AppUsage>?>(emptyList())
+    val apps = _apps.asStateFlow()
     private val _loading = MutableStateFlow(true)
     val loading = _loading.asStateFlow()
 
@@ -87,6 +100,7 @@ class UsageViewModel(app: Application) : AndroidViewModel(app) {
             }
             _days.value = runCatching { AppGraph.usage.history(from, today) }.getOrDefault(emptyList())
             _loading.value = false
+            _apps.value = runCatching { AppGraph.appUsage.top(from, today) }.getOrNull()
         }
     }
 
@@ -101,6 +115,8 @@ fun UsageScreen(vm: UsageViewModel = viewModel()) {
     val range by vm.range.collectAsStateWithLifecycle()
     val storedDays by vm.days.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
+    val apps by vm.apps.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val today by AppGraph.usage.today.collectAsStateWithLifecycle()
     val source by AppGraph.usage.source.collectAsStateWithLifecycle()
     val settings by AppGraph.settings.state.collectAsStateWithLifecycle()
@@ -202,6 +218,32 @@ fun UsageScreen(vm: UsageViewModel = viewModel()) {
         }
 
         item {
+            AppCard {
+                SectionHeader("Top apps", Icons.Rounded.Apps, trailing = {
+                    Text(range.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                })
+                Spacer(Modifier.height(10.dp))
+                val list = apps
+                when {
+                    list == null -> {
+                        Text(
+                            "Allow Usage access to see which apps use your mobile data and Wi-Fi.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        FilledTonalButton(onClick = { Perms.openUsageAccess(context) }) { Text("Allow usage access") }
+                    }
+                    list.isEmpty() -> Text("No app traffic recorded yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    else -> {
+                        val maxApp = list.maxOf { it.total }.coerceAtLeast(1L)
+                        list.forEach { AppRow(it, maxApp) }
+                    }
+                }
+            }
+        }
+
+        item {
             Text("Daily breakdown", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         }
         item {
@@ -215,6 +257,41 @@ fun UsageScreen(vm: UsageViewModel = viewModel()) {
                     Text("No data yet", Modifier.padding(20.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AppRow(app: AppUsage, max: Long) {
+    val bmp = remember(app.packageName) { app.icon?.asImageBitmap() }
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (bmp != null) {
+            Image(bmp, null, Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)))
+        } else {
+            IconBadge(Icons.Rounded.Android, MaterialTheme.colorScheme.primary, size = 38.dp)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(app.label, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                Text(Format.bytes(app.total), style = MaterialTheme.typography.titleSmall)
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                val mf = app.mobile.toFloat() / max
+                val wf = app.wifi.toFloat() / max
+                if (mf > 0f) Box(Modifier.weight(mf.coerceAtLeast(0.001f)).height(6.dp).background(Brand.Mobile))
+                if (wf > 0f) Box(Modifier.weight(wf.coerceAtLeast(0.001f)).height(6.dp).background(Brand.Wifi))
+                val rest = 1f - mf - wf
+                if (rest > 0.001f) Spacer(Modifier.weight(rest))
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Mobile ${Format.bytes(app.mobile)} · Wi-Fi ${Format.bytes(app.wifi)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

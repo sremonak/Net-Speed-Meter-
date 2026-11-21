@@ -64,7 +64,7 @@ class SystemStatsSource(private val context: Context) {
         }
 
     @SuppressLint("MissingPermission", "HardwareIds")
-    private fun subscriberId(): String? {
+    fun subscriberId(): String? {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return null
         if (context.checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return null
         return try {
