@@ -1,0 +1,7 @@
+<resources>
+    <color name="window_bg">#FFF5F7FB</color>
+    <color name="notif_download">#FF0EA5E9</color>
+    <color name="notif_upload">#FF8B5CF6</color>
+    <color name="notif_mobile">#FFF59E0B</color>
+    <color name="notif_wifi">#FF10B981</color>
+</resources>
