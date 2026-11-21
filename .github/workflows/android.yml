@@ -55,7 +55,8 @@ jobs:
       - name: Build APKs
         run: |
           chmod +x gradlew
-          ./gradlew --stacktrace assembleDebug assembleRelease
+          set -o pipefail
+          ./gradlew --stacktrace assembleDebug assembleRelease 2>&1 | tee build.log
 
       - name: Collect APKs
         run: |
@@ -65,6 +66,20 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk "dist/NetSpeedMeter-v${VERSION}-debug.apk"
           (cd dist && sha256sum *.apk > SHA256SUMS.txt)
           ls -la dist
+
+      - name: Verify APK
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=$(ls dist/NetSpeedMeter-v*[0-9].apk)
+          "$BT/apksigner" verify --print-certs "$APK" | tee verify.txt
+          "$BT/aapt2" dump badging "$APK" > badging.txt
+          enc() { sed -e ':a;N;$!ba' -e 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g'; }
+          INFO=$( { echo "APK: $(basename "$APK") ($(du -h "$APK" | cut -f1))";
+                    grep -E "^(package|sdkVersion|targetSdkVersion|application-label):" badging.txt;
+                    grep -E "Signer #1 certificate (DN|SHA-256)" verify.txt; } | enc)
+          echo "::notice title=APK summary::$INFO"
+          WARN=$(grep -E "^w: " build.log | sed 's#file://.*/com/sremonak/netspeedmeter/##' | sort -u | head -60 | enc)
+          if [ -n "$WARN" ]; then echo "::warning title=Kotlin warnings::$WARN"; fi
 
       - uses: actions/upload-artifact@v4
         with:

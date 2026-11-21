@@ -41,20 +41,27 @@ class SystemStatsSource(private val context: Context) {
     fun query(date: LocalDate, start: Long, end: Long): DailyUsage? {
         val manager = nsm ?: return null
         if (end <= start || !hasUsageAccess()) return null
-        return try {
-            val wifi = manager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, null, start, end)
-            val mobile = manager.querySummaryForDevice(ConnectivityManager.TYPE_MOBILE, subscriberId(), start, end)
-            DailyUsage(
-                date = date,
-                mobileRx = mobile?.rxBytes ?: 0,
-                mobileTx = mobile?.txBytes ?: 0,
-                wifiRx = wifi?.rxBytes ?: 0,
-                wifiTx = wifi?.txBytes ?: 0,
-            )
+        // Query each network type independently: on some Android 8/9 builds the mobile
+        // query fails without a subscriber id, which must not hide the Wi-Fi numbers.
+        val wifi = bucket(manager, ConnectivityManager.TYPE_WIFI, null, start, end)
+        val mobile = bucket(manager, ConnectivityManager.TYPE_MOBILE, subscriberId(), start, end)
+        if (wifi == null && mobile == null) return null
+        return DailyUsage(
+            date = date,
+            mobileRx = mobile?.first ?: 0,
+            mobileTx = mobile?.second ?: 0,
+            wifiRx = wifi?.first ?: 0,
+            wifiTx = wifi?.second ?: 0,
+        )
+    }
+
+    private fun bucket(manager: NetworkStatsManager, type: Int, subscriber: String?, start: Long, end: Long): Pair<Long, Long>? =
+        try {
+            val b = manager.querySummaryForDevice(type, subscriber, start, end)
+            if (b == null) null else b.rxBytes to b.txBytes
         } catch (e: Exception) {
             null
         }
-    }
 
     @SuppressLint("MissingPermission", "HardwareIds")
     private fun subscriberId(): String? {
