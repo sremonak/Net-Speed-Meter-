@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Net Speed Meter</string>
+    <string name="tile_label">Net Speed</string>
+    <string name="fgs_special_use_reason">Continuously shows real-time internet speed and daily mobile/Wi-Fi data usage in the status bar.</string>
+    <string name="channel_speed">Live speed meter</string>
+    <string name="channel_speed_desc">Persistent notification with real-time speed and today\'s data usage</string>
+    <string name="channel_alerts">Data limit alerts</string>
+    <string name="channel_alerts_desc">Warnings when your mobile data limit is close or reached</string>
+</resources>
